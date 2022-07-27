@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  generateName: basemaps-imagery-import-
+  annotations:
+    fluentbit.io/parser: json
+spec:
+  serviceAccountName: workflow-runner-sa
+  entrypoint: argosay
+  arguments:
+    parameters:
+      - name: Source
+        value: 's3://...'
+
+      - name: Cutline
+        value: Urban/Rural
+        enum:
+          -   "Urban/Rural"
+          -   "Satellite"
+
+      - name: TargetTileMatrix
+        value: NZTM2000Quad/WebMercatorQuad
+        enum:
+          -   NZTM2000Quad/WebMercatorQuad
+          -   NZTM2000Quad
+          -   WebMercatorQuad
+
+  templates:
+    - name: argosay
+      inputs:
+        parameters:
+          - name: message
+            value: '{{workflow.parameters.message}}'
+          - name: cutline
+            value: '{{workflow.parameters.cutline}}'
+          - name: tilematrix
+            value: '{{workflow.parameters.tilematrix}}'
+      container:
+        name: main
+        image: 'argoproj/argosay:v2'
+        command:
+          - /argosay
+        args:
+          - echo
+          - '{{inputs.parameters.message}}'
