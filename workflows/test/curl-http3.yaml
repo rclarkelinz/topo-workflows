@@ -1,0 +1,26 @@
+# Validate http3 outgoing connections connects
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: curl-http3
+spec:
+  ttlStrategy:
+  entrypoint: curl-http3
+  templates:
+    - name: curl-http3
+      container:
+        image: dalgibbard/curl-http3
+        command: [curl]
+        args:
+          [
+            "--keepalive-time",
+            "60",
+            "--connect-timeout",
+            "5",
+            "-m",
+            "5",
+            "-s",
+            "-vvv",
+            "--http3",
+            "https://region1.v2.argotunnel.com:443",
+          ]

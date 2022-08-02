@@ -2,10 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
   generateName: aws-list-
-  annotations: # tell fluentbit we are logging as JSON in this job!
-    fluentbit.io/parser: json
 spec:
-  serviceAccountName: workflow-runner-sa
   entrypoint: main
   arguments:
     parameters:
@@ -38,7 +35,7 @@ spec:
           - name: uri
           - name: filter
       container:
-        image: ghcr.io/linz/basemaps/cli:v6.29.0-4-ge985ea26
+        image: ghcr.io/linz/basemaps/cli:v6.33.0
         command: [node, index.cjs]
         args:
           [
@@ -47,7 +44,7 @@ spec:
             "--filter",
             "{{inputs.parameters.filter}}",
             "--group",
-            "2",
+            "5",
             "--output",
             "/tmp/file_list.json",
             "--config",
@@ -69,4 +66,5 @@ spec:
         command:
           - node
         source: |
-          console.log(JSON.stringify({ argv: process.argv, params: JSON.parse('{{inputs.parameters.file}}') }));
+          console.log(JSON.stringify({ id: process.env["ARGO_NODE_ID"], params: JSON.parse('{{inputs.parameters.file}}') }));
+          console.log(JSON.stringify({ id: process.env["ARGO_NODE_ID"], env: process.env }))
