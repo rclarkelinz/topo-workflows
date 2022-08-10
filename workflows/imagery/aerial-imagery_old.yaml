@@ -1,0 +1,41 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: test-aerial-imagery
+spec:
+  entrypoint: main
+  arguments:
+    parameters:
+      - name: source
+        value: "s3://linz-imagery-staging/test/sample/"
+      - name: filter
+        value: ".tiff?$"
+      - name: group
+        value: 10
+  templates:
+  - name: main
+    steps:                              # You should only reference external "templates" in a "steps" or "dag" "template".
+      - - name: standardise
+          templateRef:                  # You can reference a "template" from another "WorkflowTemplate" using this field
+            name: imagery-standardise-v0.2.0-20   # This is the name of the "WorkflowTemplate" CRD that contains the "template" you want
+            template: main # This is the name of the "template" you want to reference
+          arguments:                    # You can pass in arguments as normal
+            parameters:
+            - name: source
+              value: "{{workflow.parameters.source}}"
+            - name: filter
+              value: "{{workflow.parameters.filter}}"
+            - name: group
+              value: "{{workflow.parameters.group}}"
+      - - name: non-visual-qa
+          templateRef:                  # You can reference a "template" from another "WorkflowTemplate" using this field
+            name: imagery-standardise-v0.2.0-20   # This is the name of the "WorkflowTemplate" CRD that contains the "template" you want
+            template: main # This is the name of the "template" you want to reference
+          arguments:                    # You can pass in arguments as normal
+            parameters:
+            - name: source
+              value: "{{workflow.parameters.source}}"
+            - name: filter
+              value: "{{workflow.parameters.filter}}"
+            - name: group
+              value: "{{workflow.parameters.group}}"

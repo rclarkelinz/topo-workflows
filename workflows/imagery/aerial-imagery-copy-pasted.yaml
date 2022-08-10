@@ -1,0 +1,127 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: test-aerial-imagery-copy-pasted
+spec:
+  parallelism: 20
+  nodeSelector:
+    karpenter.sh/capacity-type: "spot"
+  entrypoint: main
+
+  arguments:
+    parameters:
+      - name: source
+        value: "s3://linz-imagery-staging/test/sample/"
+      - name: filter
+        value: ".tiff?$"
+      - name: group
+        value: 2
+  templates:
+    - name: main
+      dag:
+        tasks:
+          - name: aws-list
+            template: aws-list
+            arguments:
+              parameters:
+                - name: source
+                  value: "{{workflow.parameters.source}}"
+                - name: filter
+                  value: "{{workflow.parameters.filter}}"
+          - name: standardise
+            template: standardise
+            arguments:
+              parameters:
+                - name: file
+                  value: "{{item}}"
+            depends: "aws-list"
+            withParam: "{{tasks.aws-list.outputs.parameters.files}}"
+          - name: aws-list-standardised
+            template: aws-list
+            arguments:
+              parameters:
+                - name: source
+                  value: "{{tasks.standardise.outputs.artifacts.standardised_tiffs}}"
+                - name: filter
+                  value: "{{workflow.parameters.filter}}"
+            depends: "standardise"
+          - name: non-visual-qa
+            template: non-visual-qa
+            arguments:
+              parameters:
+                - name: file
+                  value: "{{item}}"
+            depends: "aws-list-standardised"
+            withParam: "{{tasks.aws-list-standardised.outputs.parameters.files}}"
+    - name: aws-list
+      inputs:
+        parameters:
+          - name: source
+          - name: filter
+      container:
+        image: ghcr.io/linz/basemaps/cli:v6.33.0
+        command: [node, index.cjs]
+        args:
+          [
+            "-V",
+            "list",
+            "--filter",
+            "{{inputs.parameters.filter}}",
+            "--group",
+            "{{workflow.parameters.group}}",
+            "--output",
+            "/tmp/file_list.json",
+            "--config",
+            "s3://linz-bucket-config/config.json",
+            "{{inputs.parameters.source}}",
+          ]
+      outputs:
+        parameters:
+          - name: files
+            valueFrom:
+              path: /tmp/file_list.json
+    - name: standardise
+      retryStrategy:
+        limit: "2"
+      inputs:
+        parameters:
+          - name: file
+      container:
+        image: ghcr.io/linz/topo-imagery:v0.2.0-20-ged4d623
+        resources:
+          requests:
+            memory: 2Gi
+            cpu: 4000m
+            ephemeral-storage: 9Gi
+        volumeMounts:
+          - name: ephemeral
+            mountPath: "/tmp"
+        command:
+          - python
+          - "/app/standardising.py"
+        args:
+          - "--source"
+          - "{{inputs.parameters.file}}"
+      outputs:
+        artifacts:
+          - name: standardised_tiffs
+            path: /tmp/
+            archive:
+              none: {}
+    - name: non-visual-qa
+      retryStrategy:
+        limit: "2"
+      inputs:
+        parameters:
+          - name: file
+      container:
+        image: ghcr.io/linz/topo-imagery:v0.2.0-20-ged4d623
+        command:
+          - python
+          - "/app/non_visual_qa.py"
+        args:
+          - "--source"
+          - "{{inputs.parameters.file}}"
+  volumes:
+    - name: ephemeral
+      emptyDir: {}

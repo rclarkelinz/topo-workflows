@@ -1,0 +1,16 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  generateName: test-aerial-imagery-
+spec:
+  entrypoint: main
+  arguments:
+    parameters:
+        - name: source
+          value: "s3://linz-imagery-staging/test/sample/"
+        - name: filter
+          value: ".tiff?$"
+        - name: group
+          value: 10
+  workflowTemplateRef:
+    name: imagery-standardise-v0.2.0-20
