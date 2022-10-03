@@ -1,0 +1,15 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: test-env
+  namespace: argo
+spec:
+  entrypoint: env
+  templates:
+    - name: env
+      inputs:
+          parameters:
+            - name: subpath
+      container:
+        image: ubuntu:22.04
+        command: [env]
