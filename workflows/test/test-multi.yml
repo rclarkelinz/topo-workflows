@@ -1,0 +1,51 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: test-multi-aws-list-
+  namespace: argo
+spec:
+  serviceAccountName: workflow-creator-sa
+  entrypoint: main
+  arguments:
+    parameters:
+      - name: source
+        value: "s3://linz-imagery-staging/test/"
+      - name: include
+        value: ".tiff?$"
+      - name: compression
+        value: "webp"
+        enum:
+          - "webp"
+          - "lzw"
+      - name: group
+        value: 10
+      - name: workflowtemplate
+        value: "imagery-standardising-v0.2.0-44"
+  templates:
+    - name: main
+      dag:
+        tasks:
+          - name: aws-list
+            template: aws-list
+    - name: aws-list
+      container:
+        image: ghcr.io/linz/argo-tasks:v1.0.0-18-gea46732
+        command: [node, /app/index.cjs]
+        env:
+          - name: AWS_ROLE_CONFIG_PATH
+            value: s3://linz-bucket-config/config-v2.json
+        args:
+          [
+            "list",
+            "--verbose",
+            "--group",
+            "1",
+            "--output",
+            "/tmp/file_list.json",
+            "{{workflow.parameters.source}}",
+          ]
+      outputs:
+        parameters:
+          - name: files
+            valueFrom:
+              path: /tmp/file_list.json
