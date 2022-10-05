@@ -1,9 +1,10 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
-  generateName: test-run-workflows-
+  generateName: test-workflow-of-workflow-
   namespace: argo
 spec:
+  serviceAccountName: workflow-creator-sa
   entrypoint: main
   arguments:
     parameters:
