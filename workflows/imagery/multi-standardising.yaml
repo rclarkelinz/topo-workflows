@@ -74,14 +74,14 @@ spec:
             arguments:
               parameters:
               - name: source
-                value: "{{inputs.parameters.source}}"
+                value: {{inputs.parameters.source}}
               - name: include
-                value: "{{workflow.parameters.include}}"
+                value: {{workflow.parameters.include}}
               - name: group
                 value: {{workflow.parameters.group}}
               - name: compression
-                value: "{{workflow.parameters.compression}}"
+                value: {{workflow.parameters.compression}}
             workflowTemplateRef:
-              name: "{{workflow.parameters.workflowtemplate}}"
+              name: {{workflow.parameters.workflowtemplate}}
         successCondition: status.phase == Succeeded
         failureCondition: status.phase in (Failed, Error)
